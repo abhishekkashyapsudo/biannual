@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "MAVEN_HOME"
+        dockerTool "Test_Docker"
+    }
+    
+    environment{
+        docker_port="${env.BRANCH_NAME=="master"? "7200": "7300"}"
+        gke_port="${env.BRANCH_NAME=="master"? "30157": "30158"}"
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh "mvn -f demosampleapplication/pom.xml clean install"
+            }
+        }
+        stage('Test') {
+            when{ branch 'develop'}
+
+            steps {
+                sh "mvn -f demosampleapplication/pom.xml test"
+            }
+
+            post {
+                success {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }
+        stage('Sonar') {
+            when{ branch 'master'}
+            steps {
+                withSonarQubeEnv(credentialsId: 'Test_Sonar', installationName: 'Test_Sonar') {
+                    sh "mvn -f demosampleapplication/pom.xml sonar:sonar -Dsonar.host.url=http://localhost:8112 -Dsonar.projectKey=sonar-abhishekkashyap"
+                }
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                sh "docker build --build-arg port1=${docker_port} --build-arg port2=${gke_port} -t c-abhiii:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile"
+                sh "docker tag c-abhiii:${BUILD_NUMBER} kashyapabhishek123/c-abhiii:${BUILD_NUMBER}"
+            }
+        }
+        stage('Containers') {
+            steps {
+                parallel(
+                    'pre':{
+                        script{
+                            res=sh(returnStdout: true, script: 'docker ps --filter publish=8080 --format {{.ID}}')
+                            if(res!=''){
+                                sh(returnStdout: false, script: 'docker stop $(docker ps --filter publish=8080 --format {{.ID}})')
+                            }
+                            res=sh(returnStdout: true, script: 'docker ps --filter expose=8080 --format {{.ID}}')
+                            if(res!=''){
+                                sh(returnStdout: false, script: 'docker stop $(docker ps --filter expose=8080 --format {{.ID}})')
+                            }
+                        }
+                },
+                'push':{
+                    withDockerRegistry(credentialsId: 'DockerHub', url: 'https://registry.hub.docker.com') {
+                       sh 'docker push kashyapabhishek123/c-abhiii:${BUILD_NUMBER}'
+                    }
+                }
+                )
+            }
+        }
+        stage('Run') {
+            steps {
+                sh "docker container run -p --publish=${docker_port}:8080 kashyapabhishek123/c-abhiii:${BUILD_NUMBER}"
+            }
+        }
+    }
+}
