@@ -70,7 +70,7 @@ pipeline {
         }
         stage('Run') {
             steps {
-                sh "docker container run -p --publish=${docker_port}:8080 kashyapabhishek123/c-abhiii:${BUILD_NUMBER}"
+                sh "docker container run -d --publish ${docker_port}:8080 kashyapabhishek123/c-abhiii:${BUILD_NUMBER}"
             }
         }
     }
