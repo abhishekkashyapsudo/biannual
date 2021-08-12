@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    tools {
+        maven "MAVEN_HOME"
+        dockerTool "Test_Docker"
+    }
+    
+    environment{
+        docker_port="${env.BRANCH_NAME == "master" ? "7100": "7200" }"
+        gke_port="${env.BRANCH_NAME == "master" ? "7100": "7200" }"
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn clean install -f demosampleapplication/pom.xml'
+               }
+        }
+        stage('Unit Testing') {
+            when{ branch 'master'}
+            steps {
+                sh 'mvn test -f demosampleapplication/pom.xml'
+               }
+
+            post {
+                success {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }
+        stage('Sonar') {
+            when{ branch 'develop'}
+            steps {
+                withSonarQubeEnv(credentialsId: 'Test_Sonar') {
+                    sh 'mvn sonar:sonar -Dsonar.host.url=http://localhost:8112 -Dsonar.projectKey=sonar-abhishekkashyap -f demosampleapplication/pom.xml'
+                }
+               }
+        }
+        stage('Docker build') {
+            steps {
+                sh 'docker build --build-arg port1=${docker_port} port2=${gke_port} -t c:abhiii:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile'
+                sh 'docker tag  c:abhiii:${BUILD_NUMBER} kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+               }
+        }
+        stage('Container') {
+            steps {
+                parallel(
+                    'pre check':{
+                        script{
+                            res=sh(returnStdout: true, script: 'docker ps --filter publish=${docker_port} --format {{.ID}}')
+                            if (res != ''){
+                                sh(returnStdout: false, script: 'docker stop $(docker ps --filter publish=${docker_port} --format {{.ID}})')
+                            }
+                            
+                        }
+                    },
+                    'push':{
+                        withDockerRegistry(credentialsId: 'DockerHub', url: 'https://registry.hub.docker.com') {
+                            sh 'docker push kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+                        }
+                    }
+                )
+            }
+        }
+        stage('Docker Deployment') {
+            steps {
+                sh 'docker container run -p --publish ${docker_port}:8080 kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+               }
+        }
+    }
+}
