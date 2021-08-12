@@ -39,8 +39,8 @@ pipeline {
         }
         stage('Docker build') {
             steps {
-                sh 'docker build --build-arg port1=${docker_port} port2=${gke_port} -t c:abhiii:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile'
-                sh 'docker tag  c:abhiii:${BUILD_NUMBER} kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+                sh 'docker build --build-arg port1=${docker_port} --build-arg port2=${gke_port} -t c-abhiii:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile'
+                sh 'docker tag  c-abhiii:${BUILD_NUMBER} kashyapabhishek123/c-abhiii:${BUILD_NUMBER}'
                }
         }
         stage('Container') {
@@ -57,7 +57,7 @@ pipeline {
                     },
                     'push':{
                         withDockerRegistry(credentialsId: 'DockerHub', url: 'https://registry.hub.docker.com') {
-                            sh 'docker push kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+                            sh 'docker push kashyapabhishek123/c-abhiii:${BUILD_NUMBER}'
                         }
                     }
                 )
