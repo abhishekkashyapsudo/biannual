@@ -32,7 +32,7 @@ pipeline {
         stage('Sonar') {
             when{ branch 'develop'}
             steps {
-                withSonarQubeEnv(credentialsId: 'Test_Sonar') {
+                withSonarQubeEnv(credentialsId: 'Test_Sonar', installationName: 'Test_Sonar') {
                     sh 'mvn sonar:sonar -Dsonar.host.url=http://localhost:8112 -Dsonar.projectKey=sonar-abhishekkashyap -f demosampleapplication/pom.xml'
                 }
                }
