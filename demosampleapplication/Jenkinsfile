@@ -65,7 +65,7 @@ pipeline {
         }
         stage('Docker Deployment') {
             steps {
-                sh 'docker container run -p --publish ${docker_port}:8080 kashyapabhishek123/c:abhiii:${BUILD_NUMBER}'
+                sh 'docker container run -dp --publish ${docker_port}:8080 kashyapabhishek123/c-abhiii:${BUILD_NUMBER}'
                }
         }
     }
