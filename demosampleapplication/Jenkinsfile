@@ -9,7 +9,7 @@ pipeline {
     environment{
         docker_port="${env.BRANCH_NAME == "master" ? "7100" : "7200"}"
         gke_port="${env.BRANCH_NAME == "master" ? "30157" : "30158"}"
-        branch_name="${env.BRANCH_NAME == "master" ? "m-abhiii" : "d-abhiii"}"
+        branch_namee="${env.BRANCH_NAME == "master" ? "m-abhiii" : "d-abhiii"}"
     }
 
     stages {
@@ -40,8 +40,8 @@ pipeline {
         }
         stage('Docker build') {
             steps {
-                    sh 'docker build --build-arg port1=${docker_port} --build-arg port2=${gke_port} -t ${branch_name}:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile'
-                    sh 'docker tag ${branch_name}:${BUILD_NUMBER} kashyapabhishek123/${branch_name}:${BUILD_NUMBER}'
+                    sh 'docker build --build-arg port1=${docker_port} --build-arg port2=${gke_port} -t ${branch_namee}:${BUILD_NUMBER} . -f demosampleapplication/Dockerfile'
+                    sh 'docker tag ${branch_namee}:${BUILD_NUMBER} kashyapabhishek123/${branch_namee}:${BUILD_NUMBER}'
             }
         }
         stage('Container') {
@@ -57,7 +57,7 @@ pipeline {
                     },
                     'Push Image':{
                         withDockerRegistry(credentialsId: 'DockerHub', url: 'https://registry.hub.docker.com') {
-                            sh 'docker push kashyapabhishek123/${branch_name}:${BUILD_NUMBER}'
+                            sh 'docker push kashyapabhishek123/${branch_namee}:${BUILD_NUMBER}'
                         }
                     }
                 )
@@ -65,7 +65,7 @@ pipeline {
         }
         stage('Docker Deployment') {
             steps {
-                sh 'docker container run -dp ${docker_port}:8080 kashyapabhishek123/${branch_name}:${BUILD_NUMBER}'
+                sh 'docker container run -dp ${docker_port}:8080 kashyapabhishek123/${branch_namee}:${BUILD_NUMBER}'
             }
         }
     }
