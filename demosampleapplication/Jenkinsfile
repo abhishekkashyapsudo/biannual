@@ -7,9 +7,9 @@ pipeline {
     }
     
     environment{
-        docker_port="{env.BRANCH_NAME == "master" ? "7100" : "7200"}"
-        gke_port="{env.BRANCH_NAME == "master" ? "30157" : "30158"}"
-        branch_name="{env.BRANCH_NAME == "master" ? "m-abhiii" : "d-abhiii"}"
+        docker_port="${env.BRANCH_NAME == "master" ? "7100" : "7200"}"
+        gke_port="${env.BRANCH_NAME == "master" ? "30157" : "30158"}"
+        branch_name="${env.BRANCH_NAME == "master" ? "m-abhiii" : "d-abhiii"}"
     }
 
     stages {
