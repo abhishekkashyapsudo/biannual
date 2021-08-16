@@ -1,0 +1,89 @@
+pipeline {
+    agent any
+
+    tools {
+        maven "MAVEN_HOME"
+        dockerTool "Test_Docker"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'feature', url:'https://github.com/abhishekkashyapsudo/biannual.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh "mvn -f demosampleapplication/pom.xml clean install"
+            }
+        }
+        stage('Unit testing') {
+            steps {
+                sh "mvn -f demosampleapplication/pom.xml test"
+
+            }
+
+            post {
+                success {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                }
+            }
+        }
+        stage('Sonar') {
+            steps {
+                withSonarQubeEnv(credentialsId: 'Test_Sonar', installationName: 'Test_Sonar') {
+                    sh "mvn -f demosampleapplication/pom.xml sonar:sonar -Dsonar.projectKey=sonar-abhishekkashyap -Dsonar.host.url=http://localhost:8112"
+                }
+                
+            }
+        }
+        
+        stage('Build docker image') {
+            steps {
+                sh "docker build -t kashyapabhishek123/biannual:1 . -f demosampleapplication/Dockerfile"
+                
+            }
+        }
+        stage('Push to docker hub') {
+            steps {
+                withDockerRegistry(credentialsId: 'DockerHub', url: 'https://registry.hub.docker.com') {
+                     sh "docker push kashyapabhishek123/biannual:1"
+                }
+                
+            }
+        }
+        stage('Delete if running') {
+            steps {
+                script{
+                    result=sh(returnStdout: true, script: 'docker ps --filter publish=7400 --format {{.ID}}')
+                    if (result != ''){
+                        sh 'docker stop $(docker ps --filter publish=7400 --format {{.ID}})'
+                    }
+                    result=sh(returnStdout: true, script: 'docker ps --filter "name=kashyapabhishek123/biannual:1" --format {{.ID}}')
+                    if (result != ''){
+                        sh 'docker stop $(docker ps --filter "name=kashyapabhishek123/biannual:1" --format {{.ID}})'
+                    }
+                }
+                
+            }
+        }
+        
+        stage('Parallel Stage') {
+            steps {
+                parallel(
+                    'Docker deploy':{
+                        sh 'docker container run -dp 7400:8080 kashyapabhishek123/biannual:1'
+                    },
+                    'Kubernetes Deploy':{
+                        sh 'kubectl apply -f demosampleapplication/deployment.yml --namespace=kubernetes-cluster-abhishekkashyap'
+                    }
+                    
+                )
+
+            }
+        }
+    }
+    
+        
+    
+}
